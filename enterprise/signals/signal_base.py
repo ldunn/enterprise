@@ -207,9 +207,13 @@ class LogLikelihood(object):
         # get -0.5 * (rNr + logdet_N) piece of likelihood
         # the np.sum here is needed because each pulsar returns a 2-tuple
         loglike += -0.5 * np.sum([ell for ell in self.pta.get_rNr_logdet(params)])
-
         # get extra prior/likelihoods
         loglike += sum(self.pta.get_logsignalprior(params))
+ 
+
+        # Break here if we have a truly disastrous fit before red noise - numerical instabilities for large-amplitude red noise can lead to weird sampling behaviour
+        if loglike < -1e16:
+            return -1e16
 
         # red noise piece
         if self.pta._commonsignals:
@@ -230,7 +234,8 @@ class LogLikelihood(object):
                     cf = sl.cho_factor(TNT + phiinv)  # cf(Sigma)
                     expval = sl.cho_solve(cf, TNr)
                     logdet_sigma = 2 * np.sum(np.log(np.diag(cf[0])))
-                except sl.LinAlgError:  # pragma: no cover
+                except sl.LinAlgError as e:  # pragma: no cover
+                    print(f"{e}")
                     return -np.inf
 
             loglike += 0.5 * (np.dot(TNr, expval) - logdet_sigma - logdet_phi)
@@ -245,13 +250,14 @@ class LogLikelihood(object):
                 try:
                     cf = sl.cho_factor(Sigma)
                     expval = sl.cho_solve(cf, TNr)
-                except sl.LinAlgError:  # pragma: no cover
+                except sl.LinAlgError as e:  # pragma: no cover
+                    print(np.linalg.eigvals(Sigma))
+                    print(params)
                     return -np.inf
 
                 logdet_sigma = np.sum(2 * np.log(np.diag(cf[0])))
 
                 loglike += 0.5 * (np.dot(TNr, expval) - logdet_sigma - logdet_phi)
-
         return loglike
 
 
@@ -675,7 +681,6 @@ class PTA(object):
     def get_lnprior(self, params):
         # map parameter vector if needed
         params = params if isinstance(params, dict) else self.map_params(params)
-
         return np.sum([p.get_logpdf(params=params) for p in self.params])
 
     @property
