@@ -30,7 +30,7 @@ setup(
     package_dir={"enterprise": "enterprise"},
     include_package_data=True,
     package_data={"enterprise": ["datafiles/*", "datafiles/ephemeris/*", "datafiles/ng9/*", "datafiles/mdc_open1/*"]},
-    python_requires=">=3.7, <3.11",
+    python_requires=">=3.7, <3.12",
     install_requires=requirements,
     license="MIT license",
     zip_safe=False,
